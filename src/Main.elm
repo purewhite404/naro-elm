@@ -41,6 +41,16 @@ type alias Tweet =
     }
 
 
+
+{-
+   Login時の情報は
+      -- 見ているtimeline
+      -- 自分のアカウント名(username)
+      -- 送信しうるツイート本文(tweetBody)
+      の3つから構成される
+-}
+
+
 type alias TripletWhenLogin =
     { timeline : List Tweet
     , username : Username
@@ -54,6 +64,10 @@ type Model
     | GuestHome (List Tweet)
     | AccountSettings UserInfo
     | Failure Http.Error
+
+
+
+-- まずログインしているかの確認を行う
 
 
 init : () -> ( Model, Cmd Msg )
@@ -141,6 +155,10 @@ viewGuestHome timeline =
         ]
 
 
+
+-- sortのためにint型timeをkeyとする
+
+
 makeInttimeTweetTuple : Tweet -> ( Int, Tweet )
 makeInttimeTweetTuple tweet =
     ( Time.posixToMillis tweet.createdAt
@@ -217,6 +235,7 @@ type Msg
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case ( msg, model ) of
+        -- ログインしているかの確認、403の場合に限りguest accountとしてtimelineを閲覧できるようになる
         ( GotMe result, Whoami ) ->
             case result of
                 Ok username ->
@@ -263,9 +282,11 @@ update msg model =
         ( FlushTweet tweetBody, WithLoginHome triplet ) ->
             ( WithLoginHome { triplet | tweetBody = tweetBody }, Cmd.none )
 
+        -- tweet送信ボタンを押すと、まずその時間がcreatedAtとして記録される
         ( ClickPostTweet, WithLoginHome triplet ) ->
             ( model, Task.perform GotTweetTime Time.now )
 
+        -- ツイート送信時間を取得すると即座にツイートを送信する
         ( GotTweetTime createdAt, WithLoginHome triplet ) ->
             let
                 toBePostedTweet =
@@ -283,6 +304,7 @@ update msg model =
                 }
             )
 
+        -- ツイートの送信に成功したかの確認
         ( GotTweeted result, WithLoginHome triplet ) ->
             case result of
                 Ok _ ->
@@ -342,6 +364,7 @@ update msg model =
                 Err err ->
                     errorHandler err
 
+        -- 上記以外の組み合わせは存在し得ない
         ( _, _ ) ->
             ( model, Cmd.none )
 
@@ -389,6 +412,10 @@ errorHandler error =
     )
 
 
+
+-- MAIN --------------------------------------------------------------------
+
+
 main =
     Browser.element
         { init = init
@@ -396,6 +423,10 @@ main =
         , subscriptions = subscriptions
         , view = view
         }
+
+
+
+-- SUBSCRIPTIONS -----------------------------------------------------------
 
 
 subscriptions : Model -> Sub Msg
