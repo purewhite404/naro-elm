@@ -75,7 +75,7 @@ init _ =
     ( Whoami
     , riskyGet
         { url = baseUrl ++ "/whoami"
-        , expect = Http.expectJson GotMe (field "username" Decode.string)
+        , expect = Http.expectString GotMe
         }
     )
 
@@ -137,7 +137,7 @@ viewWhoami =
 viewWithLoginHome : TripletWhenLogin -> Html Msg
 viewWithLoginHome { timeline, username, tweetBody } =
     div []
-        [ div [] [ text ("Login as " ++ username) ]
+        [ div [] [ text ("Logging in as " ++ username) ]
         , div [] (viewTimeline timeline)
         , div []
             [ input [ type_ "text", value tweetBody, onInput FlushTweet ] []
@@ -151,7 +151,8 @@ viewWithLoginHome { timeline, username, tweetBody } =
 viewGuestHome : List Tweet -> Html msg
 viewGuestHome timeline =
     div []
-        [ div [] (viewTimeline timeline)
+        [ div [] [ text "Guest Home (Read Only)" ]
+        , div [] (viewTimeline timeline)
         ]
 
 
@@ -399,9 +400,9 @@ userEncoder userinfo =
 tweetDecoder : Decoder Tweet
 tweetDecoder =
     Decode.map4 Tweet
-        (field "uuid" Decode.string)
-        (field "message" Decode.string)
-        (field "username" Decode.string)
+        (field "id" Decode.string)
+        (field "tweet_body" Decode.string)
+        (field "author" Decode.string)
         (field "created_at" ExDecode.datetime)
 
 
