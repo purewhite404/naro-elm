@@ -35,8 +35,8 @@ type alias UserInfo =
 
 type alias Tweet =
     { id : String
-    , author : Username
     , tweetBody : TweetBody
+    , author : Username
     , createdAt : Time.Posix
     }
 
@@ -148,10 +148,11 @@ viewWithLoginHome { timeline, username, tweetBody } =
         ]
 
 
-viewGuestHome : List Tweet -> Html msg
+viewGuestHome : List Tweet -> Html Msg
 viewGuestHome timeline =
     div []
         [ div [] [ text "Guest Home (Read Only)" ]
+        , button [ onClick GoAccountSettings ] [ text "Register or Login" ] -- TODO Browser.applicationにしたら消す
         , div [] (viewTimeline timeline)
         ]
 
@@ -220,6 +221,7 @@ viewFailure error =
 
 type Msg
     = GotMe (Result Http.Error String)
+    | GoAccountSettings
     | GotTimeLine (Result Http.Error (List Tweet))
     | FlushTweet TweetBody
     | ClickPostTweet
@@ -279,6 +281,9 @@ update msg model =
 
                 Err err ->
                     errorHandler err
+
+        ( GoAccountSettings, GuestHome _ ) ->
+            ( AccountSettings { username = "", password = "" }, Cmd.none )
 
         ( FlushTweet tweetBody, WithLoginHome triplet ) ->
             ( WithLoginHome { triplet | tweetBody = tweetBody }, Cmd.none )
@@ -383,7 +388,7 @@ tweetEncoder : Tweet -> Encode.Value
 tweetEncoder tweet =
     Encode.object
         [ ( "id", Encode.string tweet.id )
-        , ( "tweetBody", Encode.string tweet.tweetBody )
+        , ( "tweet_body", Encode.string tweet.tweetBody )
         , ( "author", Encode.string tweet.author )
         , ( "created_at", Encode.string (Iso8601.fromTime tweet.createdAt) )
         ]
