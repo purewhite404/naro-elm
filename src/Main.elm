@@ -21,7 +21,11 @@ baseUrl =
     "http://localhost:11900"
 
 
-type alias Username =
+
+-- twitterで言うところの@から始まる文字列
+
+
+type alias UserID =
     String
 
 
@@ -30,13 +34,13 @@ type alias TweetBody =
 
 
 type alias UserInfo =
-    { username : Username, password : String }
+    { userID : UserID, password : String }
 
 
 type alias Tweet =
     { id : String
+    , userID : UserID
     , tweetBody : TweetBody
-    , author : Username
     , createdAt : Time.Posix
     }
 
@@ -45,7 +49,7 @@ type alias Tweet =
 {-
    Login時の情報は
       -- 見ているtimeline
-      -- 自分のアカウント名(username)
+      -- 自分のアカウントID(userID)
       -- 送信しうるツイート本文(tweetBody)
       の3つから構成される
 -}
@@ -53,7 +57,7 @@ type alias Tweet =
 
 type alias TripletWhenLogin =
     { timeline : List Tweet
-    , username : Username
+    , userID : UserID
     , tweetBody : TweetBody
     }
 
@@ -135,9 +139,9 @@ viewWhoami =
 
 
 viewWithLoginHome : TripletWhenLogin -> Html Msg
-viewWithLoginHome { timeline, username, tweetBody } =
+viewWithLoginHome { timeline, userID, tweetBody } =
     div []
-        [ div [] [ text ("Logging in as " ++ username) ]
+        [ div [] [ text ("Logging in as " ++ userID) ]
         , div [] (viewTimeline timeline)
         , div []
             [ input [ type_ "text", value tweetBody, onInput FlushTweet ] []
@@ -171,7 +175,7 @@ makeInttimeTweetTuple tweet =
 viewTweet : Tweet -> Html msg
 viewTweet tweet =
     div [ class "tweet_container" ]
-        [ div [] [ text tweet.author ]
+        [ div [] [ text tweet.userID ]
         , div [] [ text tweet.tweetBody ]
         ]
 
@@ -189,7 +193,7 @@ viewTimeline timeline =
 viewAccountSettings : UserInfo -> Html Msg
 viewAccountSettings userinfo =
     div []
-        [ input [ type_ "text", value userinfo.username, onInput FlushUsername ] []
+        [ input [ type_ "text", value userinfo.userID, onInput FlushUserID ] []
         , input [ type_ "password", value userinfo.password, onInput FlushPassword ] []
         , button [ onClick Login ] [ text "Login" ]
         , button [ onClick Register ] [ text "Register" ]
@@ -227,7 +231,7 @@ type Msg
     | ClickPostTweet
     | GotTweeted (Result Http.Error String)
     | GotTweetTime Time.Posix
-    | FlushUsername Username
+    | FlushUserID UserID
     | FlushPassword String
     | Register
     | GotRegister (Result Http.Error String)
@@ -241,8 +245,8 @@ update msg model =
         -- ログインしているかの確認、403の場合に限りguest accountとしてtimelineを閲覧できるようになる
         ( GotMe result, Whoami ) ->
             case result of
-                Ok username ->
-                    ( WithLoginHome { timeline = [], username = username, tweetBody = "" }
+                Ok userID ->
+                    ( WithLoginHome { timeline = [], userID = userID, tweetBody = "" }
                     , riskyGet
                         { url = baseUrl ++ "/timeline"
                         , expect = Http.expectJson GotTimeLine (Decode.list tweetDecoder)
@@ -283,7 +287,7 @@ update msg model =
                     errorHandler err
 
         ( GoAccountSettings, GuestHome _ ) ->
-            ( AccountSettings { username = "", password = "" }, Cmd.none )
+            ( AccountSettings { userID = "", password = "" }, Cmd.none )
 
         ( FlushTweet tweetBody, WithLoginHome triplet ) ->
             ( WithLoginHome { triplet | tweetBody = tweetBody }, Cmd.none )
@@ -296,7 +300,7 @@ update msg model =
         ( GotTweetTime createdAt, WithLoginHome triplet ) ->
             let
                 toBePostedTweet =
-                    makeTweet triplet.tweetBody triplet.username createdAt
+                    makeTweet triplet.tweetBody triplet.userID createdAt
             in
             ( WithLoginHome
                 { triplet
@@ -319,8 +323,8 @@ update msg model =
                 Err err ->
                     errorHandler err
 
-        ( FlushUsername username, AccountSettings userinfo ) ->
-            ( AccountSettings { userinfo | username = username }, Cmd.none )
+        ( FlushUserID userID, AccountSettings userinfo ) ->
+            ( AccountSettings { userinfo | userID = userID }, Cmd.none )
 
         ( FlushPassword password, AccountSettings userinfo ) ->
             ( AccountSettings { userinfo | password = password }, Cmd.none )
@@ -360,7 +364,7 @@ update msg model =
         ( GotLogin result, AccountSettings userinfo ) ->
             case result of
                 Ok _ ->
-                    ( WithLoginHome { timeline = [], username = userinfo.username, tweetBody = "" }
+                    ( WithLoginHome { timeline = [], userID = userinfo.userID, tweetBody = "" }
                     , riskyGet
                         { url = baseUrl ++ "/timeline"
                         , expect = Http.expectJson GotTimeLine (Decode.list tweetDecoder)
@@ -375,11 +379,11 @@ update msg model =
             ( model, Cmd.none )
 
 
-makeTweet : TweetBody -> Username -> Time.Posix -> Tweet
-makeTweet tweetBody author createdAt =
+makeTweet : UserID -> TweetBody -> Time.Posix -> Tweet
+makeTweet userID tweetBody createdAt =
     { id = "" -- id is generated by the server
+    , userID = userID
     , tweetBody = tweetBody
-    , author = author
     , createdAt = createdAt
     }
 
@@ -388,8 +392,8 @@ tweetEncoder : Tweet -> Encode.Value
 tweetEncoder tweet =
     Encode.object
         [ ( "id", Encode.string tweet.id )
+        , ( "user_id", Encode.string tweet.userID )
         , ( "tweet_body", Encode.string tweet.tweetBody )
-        , ( "author", Encode.string tweet.author )
         , ( "created_at", Encode.string (Iso8601.fromTime tweet.createdAt) )
         ]
 
@@ -397,7 +401,7 @@ tweetEncoder tweet =
 userEncoder : UserInfo -> Encode.Value
 userEncoder userinfo =
     Encode.object
-        [ ( "username", Encode.string userinfo.username )
+        [ ( "user_id", Encode.string userinfo.userID )
         , ( "password", Encode.string userinfo.password )
         ]
 
@@ -406,8 +410,8 @@ tweetDecoder : Decoder Tweet
 tweetDecoder =
     Decode.map4 Tweet
         (field "id" Decode.string)
+        (field "user_id" Decode.string)
         (field "tweet_body" Decode.string)
-        (field "author" Decode.string)
         (field "created_at" ExDecode.datetime)
 
 
