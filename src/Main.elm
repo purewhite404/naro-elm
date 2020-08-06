@@ -54,7 +54,7 @@ type alias Tweet =
 -}
 
 
-type alias TripletWhenLogin =
+type alias ElementWhenLogin =
     { timeline : List Tweet
     , userID : UserID
     , tweetBody : TweetBody
@@ -63,7 +63,7 @@ type alias TripletWhenLogin =
 
 type Model
     = Whoami
-    | WithLoginHome TripletWhenLogin
+    | WithLoginHome ElementWhenLogin
     | GuestHome (List Tweet)
     | AccountSettings UserInfo
     | Failure Http.Error
@@ -119,8 +119,8 @@ view model =
         Whoami ->
             viewWhoami
 
-        WithLoginHome triplet ->
-            viewWithLoginHome triplet
+        WithLoginHome loginElement ->
+            viewWithLoginHome loginElement
 
         GuestHome timeline ->
             viewGuestHome timeline
@@ -137,7 +137,7 @@ viewWhoami =
     div [] [ text "Loading..." ]
 
 
-viewWithLoginHome : TripletWhenLogin -> Html Msg
+viewWithLoginHome : ElementWhenLogin -> Html Msg
 viewWithLoginHome { timeline, userID, tweetBody } =
     div []
         [ div [] [ text ("Logging in as " ++ userID) ]
@@ -264,10 +264,10 @@ update msg model =
                         otherwise ->
                             errorHandler err
 
-        ( GotTimeLine result, WithLoginHome triplet ) ->
+        ( GotTimeLine result, WithLoginHome loginElement ) ->
             case result of
                 Ok timeline ->
-                    ( WithLoginHome { triplet | timeline = timeline }
+                    ( WithLoginHome { loginElement | timeline = timeline }
                     , Cmd.none
                     )
 
@@ -287,10 +287,10 @@ update msg model =
         ( GoAccountSettings, GuestHome _ ) ->
             ( AccountSettings { userID = "", password = "" }, Cmd.none )
 
-        ( FlushTweet tweetBody, WithLoginHome triplet ) ->
-            ( WithLoginHome { triplet | tweetBody = tweetBody }, Cmd.none )
+        ( FlushTweet tweetBody, WithLoginHome loginElement ) ->
+            ( WithLoginHome { loginElement | tweetBody = tweetBody }, Cmd.none )
 
-        ( PostTweet, WithLoginHome triplet ) ->
+        ( PostTweet, WithLoginHome loginElement ) ->
             ( model
             , riskyPost
                 { url = baseUrl ++ "/timeline"
@@ -298,8 +298,8 @@ update msg model =
                     Http.jsonBody <|
                         tweetEncoder
                             { id = ""
-                            , userID = triplet.userID
-                            , tweetBody = triplet.tweetBody
+                            , userID = loginElement.userID
+                            , tweetBody = loginElement.tweetBody
                             , createdAt = Time.millisToPosix 0
                             }
                 , expect = Http.expectJson GotTweeted tweetDecoder
@@ -307,12 +307,12 @@ update msg model =
             )
 
         -- ツイートの送信に成功したかの確認
-        ( GotTweeted result, WithLoginHome triplet ) ->
+        ( GotTweeted result, WithLoginHome loginElement ) ->
             case result of
                 Ok postedTweet ->
                     ( WithLoginHome
-                        { triplet
-                            | timeline = postedTweet :: triplet.timeline
+                        { loginElement
+                            | timeline = postedTweet :: loginElement.timeline
                             , tweetBody = ""
                         }
                     , Cmd.none
