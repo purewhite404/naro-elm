@@ -36,6 +36,12 @@ type alias UserInfo =
     { userID : UserID, password : String }
 
 
+type alias PostTweetFormat =
+    { userID : UserID
+    , tweetBody : TweetBody
+    }
+
+
 type alias Tweet =
     { id : String
     , userID : UserID
@@ -297,10 +303,8 @@ update msg model =
                 , body =
                     Http.jsonBody <|
                         tweetEncoder
-                            { id = ""
-                            , userID = loginElement.userID
+                            { userID = loginElement.userID
                             , tweetBody = loginElement.tweetBody
-                            , createdAt = Time.millisToPosix 0
                             }
                 , expect = Http.expectJson GotTweeted tweetDecoder
                 }
@@ -377,13 +381,11 @@ update msg model =
             ( model, Cmd.none )
 
 
-tweetEncoder : Tweet -> Encode.Value
+tweetEncoder : PostTweetFormat -> Encode.Value
 tweetEncoder tweet =
     Encode.object
-        [ ( "id", Encode.string tweet.id )
-        , ( "user_id", Encode.string tweet.userID )
+        [ ( "user_id", Encode.string tweet.userID )
         , ( "tweet_body", Encode.string tweet.tweetBody )
-        , ( "created_at", Encode.string (Iso8601.fromTime tweet.createdAt) )
         ]
 
 
