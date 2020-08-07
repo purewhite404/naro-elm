@@ -2,7 +2,7 @@ module Main exposing (main)
 
 import Browser
 import Html exposing (..)
-import Html.Attributes exposing (class, type_, value)
+import Html.Attributes exposing (class, disabled, type_, value)
 import Html.Events exposing (onClick, onInput)
 import Http
 import Iso8601
@@ -152,7 +152,7 @@ viewWithLoginHome { timeline, userID, tweetBody } =
             [ input [ type_ "text", value tweetBody, onInput FlushTweet ] []
             ]
         , div []
-            [ button [ onClick PostTweet ] [ text "Tweet" ]
+            [ button [ onClick PostTweet, disabled (tweetBody == "") ] [ text "Tweet" ]
             ]
         ]
 
@@ -197,11 +197,15 @@ viewTimeline timeline =
 
 viewAccountSettings : UserInfo -> Html Msg
 viewAccountSettings userinfo =
+    let
+        invalid =
+            (String.length userinfo.userID <= 0) || (String.length userinfo.password <= 6)
+    in
     div []
         [ input [ type_ "text", value userinfo.userID, onInput FlushUserID ] []
         , input [ type_ "password", value userinfo.password, onInput FlushPassword ] []
-        , button [ onClick Login ] [ text "Login" ]
-        , button [ onClick Register ] [ text "Register" ]
+        , button [ onClick Login, disabled invalid ] [ text "Login" ]
+        , button [ onClick Register, disabled invalid ] [ text "Register" ]
         ]
 
 
