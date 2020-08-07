@@ -303,7 +303,7 @@ update msg model =
         ( PostTweet, WithLoginHome loginElement ) ->
             ( model
             , riskyPost
-                { url = baseUrl ++ "/timeline"
+                { url = baseUrl ++ "/tweet"
                 , body =
                     Http.jsonBody <|
                         tweetEncoder
